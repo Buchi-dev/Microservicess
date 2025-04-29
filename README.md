@@ -1,109 +1,197 @@
-# Microservices eCommerce Platform
+# Microservices E-Commerce Application
 
-A full-stack eCommerce platform built with microservices architecture using Node.js, Express, MongoDB, RabbitMQ, and React.
+A fully-featured e-commerce application built with a microservices architecture.
 
-## Services Overview
+## Architecture Overview
 
-The platform consists of the following services:
+This application consists of the following services:
 
-1. **User Service** (Port 3001): Handles user authentication, registration, and profile management.
-2. **Product Service** (Port 3002): Manages product catalog, inventory, and product-related operations.
-3. **Order Service** (Port 3003): Manages shopping cart, checkout process, and order history.
-4. **Payment Service** (Port 3004): Handles payment processing and transaction recording.
-5. **Frontend** (Port 3000): React application for the user interface.
+- **User Service** (Port 3001): Handles user authentication, registration, and profile management
+- **Product Service** (Port 3002): Manages product catalog, inventory, and product details
+- **Order Service** (Port 3003): Processes order creation and management
+- **Payment Service** (Port 3004): Handles payment processing and verification
+- **Frontend** (Port 3000): React-based client application
+- **RabbitMQ** (Port 5672, UI: 15672): Message broker for inter-service communication
 
-## Architecture
-
-- **Backend**: Node.js with Express
-- **Database**: MongoDB Atlas
-- **Message Broker**: RabbitMQ
-- **Frontend**: React with Ant Design
-- **Containerization**: Docker and Docker Compose
-
-## Events
-
-Services communicate asynchronously through these RabbitMQ events:
-
-- `user.created`: Published when a new user is registered
-- `product.updated`: Published when product details or inventory changes
-- `order.created`: Published when a new order is placed
-- `payment.success`: Published when payment is successfully processed
-- `payment.failed`: Published when payment processing fails
-
-## Setup Instructions
-
-### Prerequisites
+## Prerequisites
 
 - Docker and Docker Compose
-- Node.js (for local development)
-- npm or yarn
+- Node.js and npm (for local development)
+- Git
 
-### Environment Variables
+## Quick Start
 
-Each service requires specific environment variables. Example `.env` files are provided in each service directory.
-
-### Running with Docker
+### Setup with Batch Scripts (Windows)
 
 1. Clone the repository:
    ```
    git clone <repository-url>
-   cd ecommerce-microservices
+   cd microservices
    ```
 
-2. Start all services:
+2. Run the setup script:
    ```
-   docker-compose up
-   ```
-
-3. Access the application at `http://localhost:3000`
-
-### Running Services Individually
-
-Each service can be run individually for development:
-
-1. Navigate to the service directory:
-   ```
-   cd <service-name>
+   setup.bat
    ```
 
-2. Install dependencies:
+3. Access the application at http://localhost:3000
+
+4. To stop the application:
    ```
-   npm install
+   teardown.bat
    ```
 
-3. Start the service:
+### Setup with Makefile (Linux/macOS)
+
+1. Clone the repository:
    ```
-   npm run dev
+   git clone <repository-url>
+   cd microservices
    ```
 
-## API Endpoints
+2. Run the setup command:
+   ```
+   make setup
+   ```
 
-### User Service (http://localhost:3001)
-- `POST /api/auth/register` - Register a new user
-- `POST /api/auth/login` - User login
+3. Access the application at http://localhost:3000
+
+4. To stop the application:
+   ```
+   make teardown
+   ```
+
+### Manual Setup
+
+1. Clone the repository
+2. Copy `.env.example` files to `.env` in each service directory
+3. Build and start services:
+   ```
+   docker-compose build
+   docker-compose up -d
+   ```
+
+## Development
+
+### Service Structure
+
+Each service follows a similar structure:
+- `/src/controllers`: Request handlers
+- `/src/models`: Database models
+- `/src/routes`: API endpoints
+- `/src/services`: Business logic
+- `/src/utils`: Helper functions
+- `/src/queue`: Message queue consumers/publishers
+
+### Environment Variables
+
+Each service has its own `.env` file with the following common variables:
+- `NODE_ENV`: development/production
+- `PORT`: Service port
+- `MONGODB_URI`: MongoDB connection string
+- `RABBITMQ_URL`: RabbitMQ connection string
+
+Additionally:
+- User Service: `JWT_SECRET`, `JWT_EXPIRATION`
+
+### Frontend Configuration
+
+The frontend uses environment variables to connect to the backend services:
+- `VITE_API_USER_URL`
+- `VITE_API_PRODUCT_URL`
+- `VITE_API_ORDER_URL`
+- `VITE_API_PAYMENT_URL`
+
+## Maintenance and Cleanup
+
+### Codebase Cleanup
+
+We provide utilities to help maintain a clean codebase:
+
+#### Cleanup Scripts
+
+##### Windows
+```
+cleanup.bat
+```
+
+##### Linux/macOS
+```
+chmod +x cleanup.sh
+./cleanup.sh
+```
+
+These utilities help you:
+- Remove `node_modules` directories and build artifacts
+- Find large files that might be accidentally committed
+- Identify potentially unused files in the codebase
+- Clean up Docker containers, volumes, and images
+
+Always review the results before deleting any files, especially when using the unused file detection feature, as it may have false positives.
+
+#### Dependency Cleaner
+
+The dependency cleaner helps identify potentially unused npm dependencies in your services:
+
+```
+node dep-cleaner.js [service-directory]
+```
+
+If no service directory is specified, it will check all services.
+
+Example:
+```
+node dep-cleaner.js frontend
+```
+
+This tool scans your JavaScript/TypeScript files and looks for import statements or require calls that reference each dependency listed in your package.json files. It then suggests which dependencies might be safely removed.
+
+**Note:** Always verify before removing any dependency as the tool uses heuristics and may not detect all usage patterns.
+
+## API Documentation
+
+### User Service
+- `POST /api/users/register` - Register a new user
+- `POST /api/users/login` - User login
 - `GET /api/users/profile` - Get user profile
 - `PUT /api/users/profile` - Update user profile
 
-### Product Service (http://localhost:3002)
+### Product Service
 - `GET /api/products` - Get all products
-- `GET /api/products/:id` - Get a specific product
-- `POST /api/products` - Create a new product (admin)
-- `PUT /api/products/:id` - Update a product (admin)
-- `DELETE /api/products/:id` - Delete a product (admin)
+- `GET /api/products/:id` - Get product by ID
+- `POST /api/products` - Create new product (admin)
+- `PUT /api/products/:id` - Update product (admin)
+- `DELETE /api/products/:id` - Delete product (admin)
 
-### Order Service (http://localhost:3003)
-- `GET /api/cart` - Get user's cart
-- `POST /api/cart` - Add item to cart
-- `PUT /api/cart/:itemId` - Update cart item
-- `DELETE /api/cart/:itemId` - Remove cart item
-- `POST /api/orders` - Create an order from cart
-- `GET /api/orders` - Get user's orders
-- `GET /api/orders/:id` - Get specific order
+### Order Service
+- `POST /api/orders` - Create new order
+- `GET /api/orders` - Get user orders
+- `GET /api/orders/:id` - Get order details
+- `PUT /api/orders/:id/status` - Update order status (admin)
 
-### Payment Service (http://localhost:3004)
+### Payment Service
 - `POST /api/payments` - Process payment
-- `GET /api/payments/:orderId` - Get payment status for an order
+- `GET /api/payments/:orderId` - Get payment status
+
+## Troubleshooting
+
+### Common Issues
+
+1. **Services can't communicate**: Ensure the RabbitMQ service is healthy. Check logs with `docker-compose logs rabbitmq`.
+
+2. **Database connection issues**: Verify MongoDB connection strings in each service's `.env` file.
+
+3. **Frontend can't connect to backend**: Ensure the frontend environment variables are pointing to the correct service URLs.
 
 ## Contributing
 
-Follow the conventional commit message format: feat:, fix:, refactor:, etc. Pull requests should target the development branch. 
+1. Create a feature branch: `git checkout -b feature/your-feature-name`
+2. Commit changes: `git commit -m "feat: add new feature"`
+3. Push to the branch: `git push origin feature/your-feature-name`
+4. Submit a pull request
+
+Follow conventional commit messages (feat:, fix:, refactor:, etc.) and keep the codebase clean.
+
+## License
+
+[MIT License](LICENSE) 

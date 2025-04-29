@@ -16,7 +16,7 @@ import {
 import { PlusOutlined, EditOutlined, DeleteOutlined, UploadOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { productApi } from '../services/api';
+import { productService } from '../services/productService';
 
 const { Title } = Typography;
 const { Option } = Select;
@@ -47,7 +47,7 @@ const AdminProductsPage = () => {
   const fetchProducts = async () => {
     try {
       setLoading(true);
-      const response = await productApi.get('/api/products');
+      const response = await productService.getProducts();
       setProducts(response.data.data);
     } catch (error) {
       console.error('Error fetching products:', error);
@@ -80,7 +80,7 @@ const AdminProductsPage = () => {
 
   const handleDelete = async (productId) => {
     try {
-      await productApi.delete(`/api/products/${productId}`);
+      await productService.deleteProduct(productId);
       message.success('Product deleted successfully');
       fetchProducts();
     } catch (error) {
@@ -93,11 +93,11 @@ const AdminProductsPage = () => {
     try {
       if (editingProductId) {
         // Update existing product
-        await productApi.put(`/api/products/${editingProductId}`, values);
+        await productService.updateProduct(editingProductId, values);
         message.success('Product updated successfully');
       } else {
         // Create new product
-        await productApi.post('/api/products', values);
+        await productService.createProduct(values);
         message.success('Product created successfully');
       }
       setModalVisible(false);

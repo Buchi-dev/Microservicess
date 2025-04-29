@@ -1,67 +1,92 @@
 @echo off
-echo =========================================
-echo Microservices Application Setup Script
-echo =========================================
+echo ========================================
+echo Microservices Application Setup
+echo ========================================
+echo.
 
-:: Check if Docker is installed
-where docker >nul 2>nul
-if %ERRORLEVEL% neq 0 (
-    echo Docker is not installed. Please install Docker and Docker Compose first.
+REM Check if Docker is running
+echo Checking if Docker is running...
+docker info >nul 2>&1
+if %errorlevel% neq 0 (
+    echo Docker is not running! Please start Docker Desktop and try again.
     exit /b 1
 )
+echo Docker is running!
+echo.
 
-:: Check if Docker Compose is installed
-where docker-compose >nul 2>nul
-if %ERRORLEVEL% neq 0 (
-    echo Docker Compose is not installed. Please install Docker Compose first.
-    exit /b 1
+REM Create .env files from examples if they don't exist
+echo Setting up environment files...
+if not exist "user-service\.env" (
+    if exist "user-service\.env.example" (
+        copy "user-service\.env.example" "user-service\.env"
+        echo Created user-service/.env
+    )
 )
 
-:: Install dependencies for each service
-echo Installing dependencies for all services...
+if not exist "product-service\.env" (
+    if exist "product-service\.env.example" (
+        copy "product-service\.env.example" "product-service\.env"
+        echo Created product-service/.env
+    )
+)
 
-:: User Service
-echo Installing dependencies for User Service...
-cd .\user-service
-call npm install
-cd ..
+if not exist "order-service\.env" (
+    if exist "order-service\.env.example" (
+        copy "order-service\.env.example" "order-service\.env"
+        echo Created order-service/.env
+    )
+)
 
-:: Product Service
-echo Installing dependencies for Product Service...
-cd .\product-service
-call npm install
-cd ..
+if not exist "payment-service\.env" (
+    if exist "payment-service\.env.example" (
+        copy "payment-service\.env.example" "payment-service\.env"
+        echo Created payment-service/.env
+    )
+)
 
-:: Order Service
-echo Installing dependencies for Order Service...
-cd .\order-service
-call npm install
-cd ..
+if not exist "frontend\.env" (
+    if exist "frontend\.env.example" (
+        copy "frontend\.env.example" "frontend\.env"
+        echo Created frontend/.env
+    ) else (
+        echo VITE_API_USER_URL=http://localhost:3001> "frontend\.env"
+        echo VITE_API_PRODUCT_URL=http://localhost:3002>> "frontend\.env"
+        echo VITE_API_ORDER_URL=http://localhost:3003>> "frontend\.env"
+        echo VITE_API_PAYMENT_URL=http://localhost:3004>> "frontend\.env"
+        echo Created frontend/.env with default values
+    )
+)
+echo.
 
-:: Payment Service
-echo Installing dependencies for Payment Service...
-cd .\payment-service
-call npm install
-cd ..
+REM Ask user if they want to build or pull images
+echo How would you like to set up the application?
+echo 1. Build Docker images locally (slower but ensures latest code)
+echo 2. Pull pre-built Docker images if available (faster)
+choice /c 12 /n /m "Enter your choice (1 or 2): "
 
-:: Frontend
-echo Installing dependencies for Frontend...
-cd .\frontend
-call npm install
-cd ..
+if errorlevel 2 (
+    echo.
+    echo Pulling Docker images...
+    docker-compose pull
+) else (
+    echo.
+    echo Building Docker images...
+    docker-compose build
+)
 
-:: Build and start Docker containers
-echo Building and starting Docker containers...
-docker-compose build
+echo.
+echo Starting services...
 docker-compose up -d
 
-echo =========================================
-echo Setup completed!
-echo The following services are now running:
-echo - User Service: http://localhost:3001
-echo - Product Service: http://localhost:3002
-echo - Order Service: http://localhost:3003
-echo - Payment Service: http://localhost:3004
-echo - Frontend: http://localhost:3000
-echo - RabbitMQ Management UI: http://localhost:15672
-echo ========================================= 
+echo.
+echo ========================================
+echo Setup complete! Services are starting...
+echo ========================================
+echo.
+echo The application should be accessible at: http://localhost:3000
+echo RabbitMQ Management UI: http://localhost:15672 (guest/guest)
+echo.
+echo To stop the application, run: teardown.bat
+echo To view logs, run: docker-compose logs -f
+echo.
+pause 
