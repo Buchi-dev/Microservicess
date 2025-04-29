@@ -1,0 +1,64 @@
+import { Routes, Route, Navigate } from 'react-router-dom';
+import { ConfigProvider } from 'antd';
+import AppLayout from './components/layout/AppLayout';
+
+// Pages
+import HomePage from './pages/HomePage';
+import ProductsPage from './pages/ProductsPage';
+import ProductDetailPage from './pages/ProductDetailPage';
+import CartPage from './pages/CartPage';
+import WishlistPage from './pages/WishlistPage';
+import CheckoutPage from './pages/CheckoutPage';
+import OrdersPage from './pages/OrdersPage';
+import OrderDetailPage from './pages/OrderDetailPage';
+import LoginPage from './pages/LoginPage';
+import RegisterPage from './pages/RegisterPage';
+import ProfilePage from './pages/ProfilePage';
+import NotFoundPage from './pages/NotFoundPage';
+
+import { useAuth } from './context/AuthContext';
+
+function App() {
+  const { user } = useAuth();
+
+  return (
+    <ConfigProvider
+      theme={{
+        token: {
+          colorPrimary: '#1890ff',
+        },
+      }}
+    >
+      <Routes>
+        <Route path="/" element={<AppLayout />}>
+          <Route index element={<HomePage />} />
+          <Route path="products" element={<ProductsPage />} />
+          <Route path="products/:id" element={<ProductDetailPage />} />
+          <Route path="cart" element={<CartPage />} />
+          <Route path="wishlist" element={<WishlistPage />} />
+          <Route 
+            path="checkout" 
+            element={user ? <CheckoutPage /> : <Navigate to="/login" replace />} 
+          />
+          <Route 
+            path="orders" 
+            element={user ? <OrdersPage /> : <Navigate to="/login" replace />} 
+          />
+          <Route 
+            path="orders/:id" 
+            element={user ? <OrderDetailPage /> : <Navigate to="/login" replace />} 
+          />
+          <Route 
+            path="profile" 
+            element={user ? <ProfilePage /> : <Navigate to="/login" replace />} 
+          />
+          <Route path="login" element={!user ? <LoginPage /> : <Navigate to="/" replace />} />
+          <Route path="register" element={!user ? <RegisterPage /> : <Navigate to="/" replace />} />
+          <Route path="*" element={<NotFoundPage />} />
+        </Route>
+      </Routes>
+    </ConfigProvider>
+  );
+}
+
+export default App;
