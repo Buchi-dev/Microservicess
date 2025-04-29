@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useEffect } from 'react';
+import { userApi } from '../services/api';
 
 const AuthContext = createContext();
 
@@ -19,41 +20,39 @@ export const AuthProvider = ({ children }) => {
 
   const login = async (credentials) => {
     try {
-      // Mock login for now - will be replaced with actual API call
-      const mockUser = { 
-        id: '1', 
-        name: 'Test User', 
-        email: credentials.email,
-        role: 'user'
-      };
+      const response = await userApi.post('/api/auth/login', credentials);
       
-      setUser(mockUser);
-      localStorage.setItem('user', JSON.stringify(mockUser));
-      localStorage.setItem('token', 'mock-jwt-token');
-      return mockUser;
+      if (response.data.success) {
+        const userData = response.data.user;
+        setUser(userData);
+        localStorage.setItem('user', JSON.stringify(userData));
+        localStorage.setItem('token', response.data.token);
+        return userData;
+      } else {
+        throw new Error(response.data.message || 'Login failed');
+      }
     } catch (error) {
       console.error('Login error:', error);
-      throw error;
+      throw error.response?.data?.message || error.message || 'Login failed';
     }
   };
 
   const register = async (userData) => {
     try {
-      // Mock registration - will be replaced with actual API call
-      const mockUser = { 
-        id: '1', 
-        name: userData.name, 
-        email: userData.email,
-        role: 'user'
-      };
+      const response = await userApi.post('/api/auth/register', userData);
       
-      setUser(mockUser);
-      localStorage.setItem('user', JSON.stringify(mockUser));
-      localStorage.setItem('token', 'mock-jwt-token');
-      return mockUser;
+      if (response.data.success) {
+        const userData = response.data.user;
+        setUser(userData);
+        localStorage.setItem('user', JSON.stringify(userData));
+        localStorage.setItem('token', response.data.token);
+        return userData;
+      } else {
+        throw new Error(response.data.message || 'Registration failed');
+      }
     } catch (error) {
       console.error('Registration error:', error);
-      throw error;
+      throw error.response?.data?.message || error.message || 'Registration failed';
     }
   };
 

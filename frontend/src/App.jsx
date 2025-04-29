@@ -15,11 +15,16 @@ import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import ProfilePage from './pages/ProfilePage';
 import NotFoundPage from './pages/NotFoundPage';
+import AdminProductsPage from './pages/AdminProductsPage';
+import AdminDashboardPage from './pages/AdminDashboardPage';
 
 import { useAuth } from './context/AuthContext';
 
 function App() {
   const { user } = useAuth();
+
+  // Helper function to check if user is admin
+  const isAdmin = user && user.role === 'admin';
 
   return (
     <ConfigProvider
@@ -51,6 +56,14 @@ function App() {
           <Route 
             path="profile" 
             element={user ? <ProfilePage /> : <Navigate to="/login" replace />} 
+          />
+          <Route 
+            path="admin" 
+            element={isAdmin ? <AdminDashboardPage /> : <Navigate to="/" replace />} 
+          />
+          <Route 
+            path="admin/products" 
+            element={isAdmin ? <AdminProductsPage /> : <Navigate to="/" replace />} 
           />
           <Route path="login" element={!user ? <LoginPage /> : <Navigate to="/" replace />} />
           <Route path="register" element={!user ? <RegisterPage /> : <Navigate to="/" replace />} />

@@ -15,6 +15,7 @@ import {
 import { ShoppingCartOutlined, HeartOutlined, ArrowRightOutlined } from '@ant-design/icons';
 import { useCart } from '../context/CartContext';
 import { useWishlist } from '../context/WishlistContext';
+import { productService } from '../services/productService';
 
 // Import local placeholder images
 import placeholderBanner from '../assets/placeholder-banner.svg';
@@ -23,50 +24,6 @@ import placeholderCategory from '../assets/placeholder-category.svg';
 
 const { Title, Paragraph } = Typography;
 const { Meta } = Card;
-
-// Mock data for development
-const mockProducts = [
-  {
-    _id: '1',
-    name: 'Smartphone X',
-    description: 'Latest smartphone with amazing features',
-    price: 999.99,
-    category: 'Electronics',
-    image: placeholderProduct,
-    inStock: true,
-    quantity: 15
-  },
-  {
-    _id: '2',
-    name: 'Laptop Pro',
-    description: 'Powerful laptop for professionals',
-    price: 1299.99,
-    category: 'Electronics',
-    image: placeholderProduct,
-    inStock: true,
-    quantity: 8
-  },
-  {
-    _id: '3',
-    name: 'Wireless Headphones',
-    description: 'Premium sound quality headphones',
-    price: 199.99,
-    category: 'Electronics',
-    image: placeholderProduct,
-    inStock: true,
-    quantity: 20
-  },
-  {
-    _id: '4',
-    name: 'Running Shoes',
-    description: 'Comfortable shoes for running',
-    price: 89.99,
-    category: 'Clothing',
-    image: placeholderProduct,
-    inStock: true,
-    quantity: 25
-  }
-];
 
 const banners = [
   {
@@ -119,13 +76,21 @@ const HomePage = () => {
   const { addToWishlist } = useWishlist();
 
   useEffect(() => {
-    // Simulate API call
-    const timer = setTimeout(() => {
-      setFeaturedProducts(mockProducts);
-      setLoading(false);
-    }, 500);
-    
-    return () => clearTimeout(timer);
+    // Fetch featured products from API
+    const fetchFeaturedProducts = async () => {
+      try {
+        setLoading(true);
+        const response = await productService.getProducts({ limit: 4 });
+        setFeaturedProducts(response.data.data);
+      } catch (error) {
+        console.error('Error fetching featured products:', error);
+        message.error('Failed to load products');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchFeaturedProducts();
   }, []);
 
   const handleAddToCart = async (product) => {
@@ -225,6 +190,10 @@ const HomePage = () => {
           <div style={{ textAlign: 'center', margin: '40px 0' }}>
             <Spin size="large" />
           </div>
+        ) : featuredProducts.length === 0 ? (
+          <div style={{ textAlign: 'center', margin: '40px 0' }}>
+            <p>No products available. Check back soon!</p>
+          </div>
         ) : (
           <Row gutter={[16, 16]}>
             {featuredProducts.map(product => (
@@ -234,7 +203,7 @@ const HomePage = () => {
                   cover={
                     <img
                       alt={product.name}
-                      src={product.image}
+                      src={product.image || placeholderProduct}
                       style={{ height: 200, objectFit: 'cover' }}
                     />
                   }
@@ -262,7 +231,7 @@ const HomePage = () => {
                       title={product.name}
                       description={
                         <Space direction="vertical">
-                          <span>${product.price.toFixed(2)}</span>
+                          <span>${product.price?.toFixed(2) || '0.00'}</span>
                           <span>{product.category}</span>
                         </Space>
                       }

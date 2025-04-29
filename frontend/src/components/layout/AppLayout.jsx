@@ -53,6 +53,11 @@ const AppLayout = () => {
         },
         ...(user && user.role === 'admin' ? [
           {
+            key: 'admin-dashboard',
+            icon: <AppstoreOutlined />,
+            label: <Link to="/admin">Admin Dashboard</Link>,
+          },
+          {
             key: 'admin-products',
             icon: <AppstoreOutlined />,
             label: <Link to="/admin/products">Manage Products</Link>,
@@ -186,6 +191,11 @@ const AppLayout = () => {
                   label: <Link to="/orders">Orders</Link>,
                 },
                 ...(user.role === 'admin' ? [
+                  {
+                    key: 'admin-dashboard',
+                    icon: <AppstoreOutlined />,
+                    label: <Link to="/admin">Admin Dashboard</Link>,
+                  },
                   {
                     key: 'admin-products',
                     icon: <AppstoreOutlined />,

@@ -19,6 +19,33 @@ export const productService = {
     }
   },
 
+  createProduct: async (productData) => {
+    try {
+      return await productApi.post('/api/products', productData);
+    } catch (error) {
+      console.error('Error creating product:', error);
+      throw error;
+    }
+  },
+
+  updateProduct: async (id, productData) => {
+    try {
+      return await productApi.put(`/api/products/${id}`, productData);
+    } catch (error) {
+      console.error(`Error updating product ${id}:`, error);
+      throw error;
+    }
+  },
+
+  deleteProduct: async (id) => {
+    try {
+      return await productApi.delete(`/api/products/${id}`);
+    } catch (error) {
+      console.error(`Error deleting product ${id}:`, error);
+      throw error;
+    }
+  },
+
   searchProducts: async (query) => {
     try {
       return await productApi.get('/api/products/search', { 
