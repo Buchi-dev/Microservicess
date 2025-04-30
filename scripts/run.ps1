@@ -11,6 +11,11 @@ try {
     Exit 1
 }
 
+# Clean Docker resources if needed
+Write-Host "Cleaning up Docker resources before starting..." -ForegroundColor Green
+docker container prune -f
+docker image prune -f
+
 # Install dependencies for shared module
 Write-Host "Installing dependencies for shared module..." -ForegroundColor Green
 Push-Location -Path "shared"
@@ -62,6 +67,10 @@ docker-compose up --build -d
 Write-Host "Services status:" -ForegroundColor Green
 docker-compose ps
 
+# Display Docker resource usage
+Write-Host "Current Docker resource usage:" -ForegroundColor Green
+docker stats --no-stream
+
 Write-Host "=====================================" -ForegroundColor Green
 Write-Host "All services are now running!" -ForegroundColor Green
 Write-Host " - Frontend: http://localhost:3000" -ForegroundColor Green
@@ -71,4 +80,7 @@ Write-Host " - Order API: http://localhost:3003" -ForegroundColor Green
 Write-Host " - Payment API: http://localhost:3004" -ForegroundColor Green
 Write-Host " - RabbitMQ Dashboard: http://localhost:15672" -ForegroundColor Green
 Write-Host "=====================================" -ForegroundColor Green
-Write-Host "To stop all services, run: .\stop.ps1" -ForegroundColor Yellow 
+Write-Host "Memory usage tips:" -ForegroundColor Yellow
+Write-Host " - To monitor memory: docker stats" -ForegroundColor Yellow
+Write-Host " - To clean up: .\docker-cleanup.ps1" -ForegroundColor Yellow
+Write-Host " - To stop all services: .\stop.ps1" -ForegroundColor Yellow 

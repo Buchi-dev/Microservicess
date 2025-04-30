@@ -2,30 +2,77 @@ const amqp = require('amqplib');
 
 let connection;
 let channel;
+let reconnectTimer;
+const MAX_RECONNECT_ATTEMPTS = 5;
+let reconnectAttempts = 0;
 
 /**
  * Connects to RabbitMQ server
  */
 async function connect() {
   try {
-    const url = process.env.RABBITMQ_URL || 'amqp://guest:guest@rabbitmq:5672';
+    // Clear any existing reconnect timer
+    if (reconnectTimer) {
+      clearTimeout(reconnectTimer);
+      reconnectTimer = null;
+    }
+    
+    const url = 'amqp://guest:guest@rabbitmq:5672';
     connection = await amqp.connect(url);
     channel = await connection.createChannel();
+    
+    // Reset reconnect attempts on successful connection
+    reconnectAttempts = 0;
     
     console.log('Connected to RabbitMQ');
     
     // Handle connection close
     connection.on('close', () => {
       console.log('RabbitMQ connection closed');
-      // Try to reconnect after 5 seconds
-      setTimeout(connect, 5000);
+      channel = null;
+      
+      // Try to reconnect with backoff
+      if (reconnectAttempts < MAX_RECONNECT_ATTEMPTS) {
+        const backoffTime = Math.min(1000 * 2 ** reconnectAttempts, 30000);
+        console.log(`Attempting to reconnect in ${backoffTime}ms (attempt ${reconnectAttempts + 1}/${MAX_RECONNECT_ATTEMPTS})`);
+        
+        reconnectTimer = setTimeout(() => {
+          reconnectAttempts++;
+          connect();
+        }, backoffTime);
+      } else {
+        console.error('Max reconnection attempts reached. Giving up.');
+      }
+    });
+    
+    // Handle connection errors
+    connection.on('error', (err) => {
+      console.error('RabbitMQ connection error:', err.message);
+      if (connection) {
+        try {
+          connection.close();
+        } catch (e) {
+          console.error('Error closing connection:', e.message);
+        }
+      }
     });
     
     return { connection, channel };
   } catch (error) {
     console.error('Error connecting to RabbitMQ:', error.message);
-    // Try to reconnect after 5 seconds
-    setTimeout(connect, 5000);
+    
+    // Try to reconnect with backoff
+    if (reconnectAttempts < MAX_RECONNECT_ATTEMPTS) {
+      const backoffTime = Math.min(1000 * 2 ** reconnectAttempts, 30000);
+      console.log(`Attempting to reconnect in ${backoffTime}ms (attempt ${reconnectAttempts + 1}/${MAX_RECONNECT_ATTEMPTS})`);
+      
+      reconnectTimer = setTimeout(() => {
+        reconnectAttempts++;
+        connect();
+      }, backoffTime);
+    } else {
+      console.error('Max reconnection attempts reached. Giving up.');
+    }
   }
 }
 
@@ -33,7 +80,10 @@ async function connect() {
  * Create a queue if it doesn't exist
  */
 async function createQueue(queueName) {
-  if (!channel) throw new Error('Channel not initialized');
+  if (!channel) {
+    await reconnectIfNeeded();
+  }
+  
   await channel.assertQueue(queueName, { durable: true });
   return queueName;
 }
@@ -42,7 +92,9 @@ async function createQueue(queueName) {
  * Publish a message to a queue
  */
 async function publishToQueue(queueName, message) {
-  if (!channel) throw new Error('Channel not initialized');
+  if (!channel) {
+    await reconnectIfNeeded();
+  }
   
   // Ensure the queue exists
   await createQueue(queueName);
@@ -58,7 +110,9 @@ async function publishToQueue(queueName, message) {
  * Consume messages from a queue
  */
 async function consumeFromQueue(queueName, callback) {
-  if (!channel) throw new Error('Channel not initialized');
+  if (!channel) {
+    await reconnectIfNeeded();
+  }
   
   // Ensure the queue exists
   await createQueue(queueName);
@@ -67,9 +121,15 @@ async function consumeFromQueue(queueName, callback) {
     queueName,
     (message) => {
       if (message) {
-        const content = JSON.parse(message.content.toString());
-        callback(content, message);
-        channel.ack(message);
+        try {
+          const content = JSON.parse(message.content.toString());
+          callback(content, message);
+          channel.ack(message);
+        } catch (error) {
+          console.error(`Error processing message from ${queueName}:`, error);
+          // Still acknowledge the message to prevent queue buildup
+          channel.ack(message);
+        }
       }
     },
     { noAck: false }
@@ -77,11 +137,47 @@ async function consumeFromQueue(queueName, callback) {
 }
 
 /**
+ * Helper to reconnect if needed
+ */
+async function reconnectIfNeeded() {
+  if (!connection || !channel) {
+    console.log('No active connection, reconnecting...');
+    await connect();
+    
+    if (!channel) {
+      throw new Error('Failed to establish RabbitMQ connection');
+    }
+  }
+}
+
+/**
  * Close the connection
  */
 async function close() {
-  if (channel) await channel.close();
-  if (connection) await connection.close();
+  if (reconnectTimer) {
+    clearTimeout(reconnectTimer);
+    reconnectTimer = null;
+  }
+  
+  if (channel) {
+    try {
+      await channel.close();
+    } catch (error) {
+      console.error('Error closing channel:', error.message);
+    }
+    channel = null;
+  }
+  
+  if (connection) {
+    try {
+      await connection.close();
+    } catch (error) {
+      console.error('Error closing connection:', error.message);
+    }
+    connection = null;
+  }
+  
+  console.log('RabbitMQ connection closed gracefully');
 }
 
 module.exports = {
