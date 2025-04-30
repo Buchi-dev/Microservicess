@@ -1,0 +1,9 @@
+{
+  "name": "shared",
+  "version": "1.0.0",
+  "description": "Shared modules for microservices",
+  "main": "index.js",
+  "dependencies": {
+    "amqplib": "^0.10.3"
+  }
+} 
