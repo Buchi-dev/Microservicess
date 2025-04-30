@@ -4,7 +4,7 @@ services:
   # User Service
   user-service:
     build: 
-      context: ./user-service
+      context: ./server/user-service
     ports:
       - "3001:3001"
     environment:
@@ -18,14 +18,14 @@ services:
         condition: service_healthy
     restart: always
     volumes:
-      - ./user-service:/app
+      - ./server/user-service:/app
       - ./shared:/app/shared
       - /app/node_modules
 
   # Product Service
   product-service:
     build:
-      context: ./product-service
+      context: ./server/product-service
     ports:
       - "3002:3002"
     environment:
@@ -38,14 +38,14 @@ services:
         condition: service_healthy
     restart: always
     volumes:
-      - ./product-service:/app
+      - ./server/product-service:/app
       - ./shared:/app/shared
       - /app/node_modules
 
   # Order Service
   order-service:
     build:
-      context: ./order-service
+      context: ./server/order-service
     ports:
       - "3003:3003"
     environment:
@@ -58,14 +58,14 @@ services:
         condition: service_healthy
     restart: always
     volumes:
-      - ./order-service:/app
+      - ./server/order-service:/app
       - ./shared:/app/shared
       - /app/node_modules
 
   # Payment Service
   payment-service:
     build:
-      context: ./payment-service
+      context: ./server/payment-service
     ports:
       - "3004:3004"
     environment:
@@ -78,7 +78,7 @@ services:
         condition: service_healthy
     restart: always
     volumes:
-      - ./payment-service:/app
+      - ./server/payment-service:/app
       - ./shared:/app/shared
       - /app/node_modules
 
