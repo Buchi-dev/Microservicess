@@ -1,10 +1,27 @@
 const amqp = require('amqplib');
 
+// Standard event types for inter-service communication
+const EVENT_TYPES = {
+  USER_CREATED: 'user.created',
+  USER_UPDATED: 'user.updated',
+  PRODUCT_CREATED: 'product.created',
+  PRODUCT_UPDATED: 'product.updated',
+  ORDER_CREATED: 'order.created',
+  ORDER_UPDATED: 'order.updated',
+  ORDER_PAID: 'order.paid',
+  PAYMENT_CREATED: 'payment.created',
+  PAYMENT_SUCCEEDED: 'payment.succeeded',
+  PAYMENT_FAILED: 'payment.failed'
+};
+
 let connection;
 let channel;
 let reconnectTimer;
 const MAX_RECONNECT_ATTEMPTS = 5;
 let reconnectAttempts = 0;
+
+// Active subscriptions to reestablish on reconnect
+const activeSubscriptions = new Map();
 
 /**
  * Connects to RabbitMQ server
@@ -25,6 +42,14 @@ async function connect() {
     reconnectAttempts = 0;
     
     console.log('Connected to RabbitMQ');
+    
+    // Reestablish all active subscriptions
+    if (activeSubscriptions.size > 0) {
+      console.log(`Reestablishing ${activeSubscriptions.size} subscriptions`);
+      for (const [queueName, callback] of activeSubscriptions.entries()) {
+        await subscribeToMessages(queueName, callback, false); // Don't re-register
+      }
+    }
     
     // Handle connection close
     connection.on('close', () => {
@@ -107,6 +132,34 @@ async function publishToQueue(queueName, message) {
 }
 
 /**
+ * Publish a message with a specific event type
+ */
+async function publishMessage(eventType, data) {
+  const message = {
+    eventType,
+    data,
+    timestamp: new Date().toISOString()
+  };
+  
+  return publishToQueue(eventType, message);
+}
+
+/**
+ * Subscribe to messages from a specific event queue
+ */
+async function subscribeToMessages(eventType, callback, registerSubscription = true) {
+  if (registerSubscription) {
+    // Store the subscription for reestablishment on reconnect
+    activeSubscriptions.set(eventType, callback);
+  }
+  
+  return consumeFromQueue(eventType, (message) => {
+    console.log(`Received message from ${eventType}:`, message);
+    callback(message.data || message);
+  });
+}
+
+/**
  * Consume messages from a queue
  */
 async function consumeFromQueue(queueName, callback) {
@@ -177,13 +230,19 @@ async function close() {
     connection = null;
   }
   
+  // Clear active subscriptions
+  activeSubscriptions.clear();
+  
   console.log('RabbitMQ connection closed gracefully');
 }
 
 module.exports = {
+  EVENT_TYPES,
   connect,
   createQueue,
   publishToQueue,
+  publishMessage,
+  subscribeToMessages,
   consumeFromQueue,
   close
 }; 

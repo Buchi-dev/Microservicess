@@ -21,6 +21,9 @@ import {
   FileTextOutlined,
   AppstoreOutlined,
   HeartOutlined,
+  OrderedListOutlined,
+  TeamOutlined,
+  TagsOutlined
 } from '@ant-design/icons';
 import { useAuth } from '../../context/AuthContext';
 import { useCart } from '../../context/CartContext';
@@ -38,6 +41,34 @@ const AppLayout = () => {
     navigate('/');
   };
 
+  const adminMenuItems = user && user.role === 'admin' ? [
+    {
+      key: 'admin-dashboard',
+      icon: <AppstoreOutlined />,
+      label: <Link to="/admin">Admin Dashboard</Link>,
+    },
+    {
+      key: 'admin-products',
+      icon: <ShoppingOutlined />,
+      label: <Link to="/admin/products">Manage Products</Link>,
+    },
+    {
+      key: 'admin-orders',
+      icon: <OrderedListOutlined />,
+      label: <Link to="/admin/orders">Manage Orders</Link>,
+    },
+    {
+      key: 'admin-users',
+      icon: <TeamOutlined />,
+      label: <Link to="/admin/users">Manage Users</Link>,
+    },
+    {
+      key: 'admin-categories',
+      icon: <TagsOutlined />,
+      label: <Link to="/admin/categories">Manage Categories</Link>,
+    }
+  ] : [];
+
   const userMenu = (
     <Menu
       items={[
@@ -51,17 +82,16 @@ const AppLayout = () => {
           icon: <FileTextOutlined />,
           label: <Link to="/orders">Orders</Link>,
         },
-        ...(user && user.role === 'admin' ? [
+        ...(adminMenuItems.length > 0 ? [
           {
-            key: 'admin-dashboard',
-            icon: <AppstoreOutlined />,
-            label: <Link to="/admin">Admin Dashboard</Link>,
+            type: 'divider'
           },
           {
-            key: 'admin-products',
-            icon: <AppstoreOutlined />,
-            label: <Link to="/admin/products">Manage Products</Link>,
-          }
+            key: 'admin-section',
+            type: 'group',
+            label: 'Admin',
+          },
+          ...adminMenuItems
         ] : []),
         {
           type: 'divider'
@@ -191,17 +221,15 @@ const AppLayout = () => {
                   label: <Link to="/orders">Orders</Link>,
                 },
                 ...(user.role === 'admin' ? [
+                  { type: 'divider' },
                   {
-                    key: 'admin-dashboard',
-                    icon: <AppstoreOutlined />,
-                    label: <Link to="/admin">Admin Dashboard</Link>,
+                    key: 'admin-section',
+                    type: 'group',
+                    label: 'Admin',
                   },
-                  {
-                    key: 'admin-products',
-                    icon: <AppstoreOutlined />,
-                    label: <Link to="/admin/products">Manage Products</Link>,
-                  }
+                  ...adminMenuItems
                 ] : []),
+                { type: 'divider' },
                 {
                   key: 'logout',
                   icon: <LogoutOutlined />,

@@ -25,7 +25,9 @@ const AdminProductsPage = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [products, setProducts] = useState([]);
+  const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [categoriesLoading, setCategoriesLoading] = useState(true);
   const [modalVisible, setModalVisible] = useState(false);
   const [form] = Form.useForm();
   const [editingProductId, setEditingProductId] = useState(null);
@@ -39,6 +41,24 @@ const AdminProductsPage = () => {
     }
   }, [user, navigate]);
 
+  // Fetch categories
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        setCategoriesLoading(true);
+        const response = await productService.getCategories();
+        setCategories(response.data.data);
+      } catch (error) {
+        console.error('Error fetching categories:', error);
+        message.error('Failed to fetch categories');
+      } finally {
+        setCategoriesLoading(false);
+      }
+    };
+
+    fetchCategories();
+  }, []);
+
   // Fetch products
   useEffect(() => {
     fetchProducts();
@@ -47,7 +67,7 @@ const AdminProductsPage = () => {
   const fetchProducts = async () => {
     try {
       setLoading(true);
-      const response = await productService.getProducts();
+      const response = await productService.getProducts({ limit: 100 }); // Get more products for admin view
       setProducts(response.data.data);
     } catch (error) {
       console.error('Error fetching products:', error);
@@ -73,7 +93,8 @@ const AdminProductsPage = () => {
       price: product.price,
       category: product.category,
       quantity: product.quantity,
-      // image is handled separately
+      inStock: product.inStock,
+      image: product.image
     });
     setModalVisible(true);
   };
@@ -91,6 +112,9 @@ const AdminProductsPage = () => {
 
   const handleFormSubmit = async (values) => {
     try {
+      // Set inStock based on quantity
+      values.inStock = values.quantity > 0;
+
       if (editingProductId) {
         // Update existing product
         await productService.updateProduct(editingProductId, values);
@@ -228,14 +252,10 @@ const AdminProductsPage = () => {
             label="Category"
             rules={[{ required: true, message: 'Please select a category' }]}
           >
-            <Select>
-              <Option value="Electronics">Electronics</Option>
-              <Option value="Clothing">Clothing</Option>
-              <Option value="Home & Kitchen">Home & Kitchen</Option>
-              <Option value="Books">Books</Option>
-              <Option value="Toys">Toys</Option>
-              <Option value="Beauty">Beauty</Option>
-              <Option value="Sports">Sports</Option>
+            <Select loading={categoriesLoading}>
+              {categories.map(category => (
+                <Option key={category} value={category}>{category}</Option>
+              ))}
             </Select>
           </Form.Item>
 
@@ -249,17 +269,15 @@ const AdminProductsPage = () => {
 
           <Form.Item
             name="image"
-            label="Product Image"
+            label="Image URL"
+            rules={[{ required: true, message: 'Please enter image URL' }]}
           >
-            <Input placeholder="Enter image URL" />
+            <Input placeholder="https://example.com/image.jpg" />
           </Form.Item>
 
           <Form.Item>
-            <Button type="primary" htmlType="submit" style={{ marginRight: 8 }}>
-              {editingProductId ? 'Update' : 'Create'}
-            </Button>
-            <Button onClick={() => setModalVisible(false)}>
-              Cancel
+            <Button type="primary" htmlType="submit" block>
+              {editingProductId ? 'Update Product' : 'Create Product'}
             </Button>
           </Form.Item>
         </Form>

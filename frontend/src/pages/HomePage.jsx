@@ -17,61 +17,14 @@ import { useCart } from '../context/CartContext';
 import { useWishlist } from '../context/WishlistContext';
 import { productService } from '../services/productService';
 
-// Import local placeholder images
-import placeholderBanner from '../assets/placeholder-banner.svg';
-import placeholderProduct from '../assets/placeholder-product.svg';
-import placeholderCategory from '../assets/placeholder-category.svg';
-
 const { Title, Paragraph } = Typography;
 const { Meta } = Card;
 
-const banners = [
-  {
-    title: 'Summer Sale',
-    description: 'Up to 50% off on selected items',
-    image: placeholderBanner,
-    link: '/products?category=summer'
-  },
-  {
-    title: 'New Arrivals',
-    description: 'Check out our latest products',
-    image: placeholderBanner,
-    link: '/products?category=new'
-  },
-  {
-    title: 'Limited Time Offers',
-    description: 'Special deals for a limited time',
-    image: placeholderBanner,
-    link: '/products?category=deals'
-  }
-];
-
-const categories = [
-  {
-    name: 'Electronics',
-    image: placeholderCategory,
-    link: '/products?category=Electronics'
-  },
-  {
-    name: 'Clothing',
-    image: placeholderCategory,
-    link: '/products?category=Clothing'
-  },
-  {
-    name: 'Home & Kitchen',
-    image: placeholderCategory,
-    link: '/products?category=Home+%26+Kitchen'
-  },
-  {
-    name: 'Books',
-    image: placeholderCategory,
-    link: '/products?category=Books'
-  }
-];
-
 const HomePage = () => {
   const [featuredProducts, setFeaturedProducts] = useState([]);
+  const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [categoryLoading, setCategoryLoading] = useState(true);
   const { addToCart } = useCart();
   const { addToWishlist } = useWishlist();
 
@@ -90,7 +43,22 @@ const HomePage = () => {
       }
     };
 
+    // Fetch categories from API
+    const fetchCategories = async () => {
+      try {
+        setCategoryLoading(true);
+        const response = await productService.getCategories();
+        setCategories(response.data.data);
+      } catch (error) {
+        console.error('Error fetching categories:', error);
+        message.error('Failed to load categories');
+      } finally {
+        setCategoryLoading(false);
+      }
+    };
+
     fetchFeaturedProducts();
+    fetchCategories();
   }, []);
 
   const handleAddToCart = async (product) => {
@@ -118,63 +86,43 @@ const HomePage = () => {
   return (
     <div className="home-page">
       {/* Hero Banner */}
-      <Carousel autoplay>
-        {banners.map((banner, index) => (
-          <div key={index}>
-            <div 
-              style={{ 
-                position: 'relative',
-                height: '400px',
-              }}
-            >
-              <img 
-                src={banner.image} 
-                alt={banner.title}
-                style={{
-                  width: '100%',
-                  height: '100%',
-                  objectFit: 'cover'
-                }}
-              />
-              <div 
-                style={{ 
-                  position: 'absolute',
-                  bottom: 0,
-                  left: 0,
-                  right: 0,
-                  padding: '2rem',
-                  background: 'rgba(0,0,0,0.6)',
-                  color: 'white'
-                }}
-              >
-                <Title level={2} style={{ color: 'white', margin: 0 }}>{banner.title}</Title>
-                <Paragraph style={{ color: 'white', margin: '0.5rem 0 1rem' }}>{banner.description}</Paragraph>
-                <Link to={banner.link}>
-                  <Button type="primary" size="large">Shop Now</Button>
-                </Link>
-              </div>
-            </div>
-          </div>
-        ))}
-      </Carousel>
+      <div className="hero-banner">
+        <div className="hero-content">
+          <Title level={1}>Welcome to Our Shop</Title>
+          <Paragraph>Discover amazing products with great deals</Paragraph>
+          <Link to="/products">
+            <Button type="primary" size="large">Shop Now</Button>
+          </Link>
+        </div>
+      </div>
 
       {/* Categories */}
       <div style={{ margin: '3rem 0' }}>
         <Title level={2}>Shop by Category</Title>
-        <Row gutter={[16, 16]}>
-          {categories.map((category, index) => (
-            <Col xs={12} sm={6} key={index}>
-              <Link to={category.link}>
-                <Card
-                  hoverable
-                  cover={<img alt={category.name} src={category.image} />}
-                >
-                  <Meta title={category.name} />
-                </Card>
-              </Link>
-            </Col>
-          ))}
-        </Row>
+        {categoryLoading ? (
+          <div style={{ textAlign: 'center', margin: '40px 0' }}>
+            <Spin size="large" />
+          </div>
+        ) : categories.length === 0 ? (
+          <div style={{ textAlign: 'center', margin: '40px 0' }}>
+            <p>No categories available. Check back soon!</p>
+          </div>
+        ) : (
+          <Row gutter={[16, 16]}>
+            {categories.map((category, index) => (
+              <Col xs={12} sm={6} key={index}>
+                <Link to={`/products?category=${encodeURIComponent(category)}`}>
+                  <Card
+                    hoverable
+                    className="category-card"
+                  >
+                    <Meta title={category} />
+                  </Card>
+                </Link>
+              </Col>
+            ))}
+          </Row>
+        )}
       </div>
       
       {/* Featured Products */}
@@ -203,7 +151,7 @@ const HomePage = () => {
                   cover={
                     <img
                       alt={product.name}
-                      src={product.image || placeholderProduct}
+                      src={product.image}
                       style={{ height: 200, objectFit: 'cover' }}
                     />
                   }
@@ -244,21 +192,30 @@ const HomePage = () => {
         )}
       </div>
       
-      {/* Promotional Banner */}
-      <div 
-        style={{ 
-          margin: '3rem 0',
-          padding: '2rem',
-          background: '#f0f2f5',
-          borderRadius: '8px',
-          textAlign: 'center'
-        }}
-      >
-        <Title level={2}>Join Our Newsletter</Title>
-        <Paragraph>
-          Subscribe to our newsletter and be the first to know about new products and special offers!
-        </Paragraph>
-        <Button type="primary" size="large">Subscribe Now</Button>
+      <Divider />
+      
+      {/* Customer Benefits Section */}
+      <div style={{ margin: '3rem 0' }}>
+        <Row gutter={[32, 32]} justify="center">
+          <Col xs={24} sm={8}>
+            <div className="benefit-item">
+              <Title level={4}>Free Shipping</Title>
+              <Paragraph>On all orders over $50</Paragraph>
+            </div>
+          </Col>
+          <Col xs={24} sm={8}>
+            <div className="benefit-item">
+              <Title level={4}>Easy Returns</Title>
+              <Paragraph>30-day return policy</Paragraph>
+            </div>
+          </Col>
+          <Col xs={24} sm={8}>
+            <div className="benefit-item">
+              <Title level={4}>Secure Payments</Title>
+              <Paragraph>Protected by industry standards</Paragraph>
+            </div>
+          </Col>
+        </Row>
       </div>
     </div>
   );

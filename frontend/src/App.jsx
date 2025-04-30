@@ -17,6 +17,9 @@ import ProfilePage from './pages/ProfilePage';
 import NotFoundPage from './pages/NotFoundPage';
 import AdminProductsPage from './pages/AdminProductsPage';
 import AdminDashboardPage from './pages/AdminDashboardPage';
+import OrderManagementPage from './pages/OrderManagementPage';
+import UserManagementPage from './pages/UserManagementPage';
+import CategoryManagementPage from './pages/CategoryManagementPage';
 
 import { useAuth } from './context/AuthContext';
 
@@ -57,6 +60,8 @@ function App() {
             path="profile" 
             element={user ? <ProfilePage /> : <Navigate to="/login" replace />} 
           />
+          
+          {/* Admin Routes */}
           <Route 
             path="admin" 
             element={isAdmin ? <AdminDashboardPage /> : <Navigate to="/" replace />} 
@@ -65,8 +70,24 @@ function App() {
             path="admin/products" 
             element={isAdmin ? <AdminProductsPage /> : <Navigate to="/" replace />} 
           />
+          <Route 
+            path="admin/orders" 
+            element={isAdmin ? <OrderManagementPage /> : <Navigate to="/" replace />} 
+          />
+          <Route 
+            path="admin/users" 
+            element={isAdmin ? <UserManagementPage /> : <Navigate to="/" replace />} 
+          />
+          <Route 
+            path="admin/categories" 
+            element={isAdmin ? <CategoryManagementPage /> : <Navigate to="/" replace />} 
+          />
+          
+          {/* Auth Routes */}
           <Route path="login" element={!user ? <LoginPage /> : <Navigate to="/" replace />} />
           <Route path="register" element={!user ? <RegisterPage /> : <Navigate to="/" replace />} />
+          
+          {/* Fallback Route */}
           <Route path="*" element={<NotFoundPage />} />
         </Route>
       </Routes>

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { 
   Typography, 
   Row, 
@@ -15,119 +15,99 @@ import {
 import { SearchOutlined, ShoppingCartOutlined, HeartOutlined } from '@ant-design/icons';
 import { useCart } from '../context/CartContext';
 import { useWishlist } from '../context/WishlistContext';
+import { productService } from '../services/productService';
 
 const { Title, Paragraph } = Typography;
 const { Meta } = Card;
 const { Search } = Input;
 const { Option } = Select;
 
-// Mock data for development
-const mockProducts = [
-  {
-    _id: '1',
-    name: 'Smartphone X',
-    description: 'Latest smartphone with amazing features',
-    price: 999.99,
-    category: 'Electronics',
-    image: 'https://via.placeholder.com/300?text=Smartphone',
-    inStock: true,
-    quantity: 15
-  },
-  {
-    _id: '2',
-    name: 'Laptop Pro',
-    description: 'Powerful laptop for professionals',
-    price: 1299.99,
-    category: 'Electronics',
-    image: 'https://via.placeholder.com/300?text=Laptop',
-    inStock: true,
-    quantity: 8
-  },
-  {
-    _id: '3',
-    name: 'Wireless Headphones',
-    description: 'Premium sound quality headphones',
-    price: 199.99,
-    category: 'Electronics',
-    image: 'https://via.placeholder.com/300?text=Headphones',
-    inStock: true,
-    quantity: 20
-  },
-  {
-    _id: '4',
-    name: 'Running Shoes',
-    description: 'Comfortable shoes for running',
-    price: 89.99,
-    category: 'Clothing',
-    image: 'https://via.placeholder.com/300?text=Shoes',
-    inStock: true,
-    quantity: 25
-  },
-  {
-    _id: '5',
-    name: 'Coffee Maker',
-    description: 'Automatic coffee maker for home',
-    price: 79.99,
-    category: 'Home & Kitchen',
-    image: 'https://via.placeholder.com/300?text=Coffee+Maker',
-    inStock: true,
-    quantity: 12
-  },
-  {
-    _id: '6',
-    name: 'Novel Book',
-    description: 'Bestselling novel of the year',
-    price: 14.99,
-    category: 'Books',
-    image: 'https://via.placeholder.com/300?text=Book',
-    inStock: true,
-    quantity: 30
-  }
-];
-
 const ProductsPage = () => {
+  const location = useLocation();
   const [products, setProducts] = useState([]);
+  const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [categoryLoading, setCategoryLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState('');
+  const [pagination, setPagination] = useState({
+    page: 1,
+    limit: 12,
+    total: 0
+  });
   const { addToCart } = useCart();
   const { addToWishlist } = useWishlist();
 
   useEffect(() => {
-    // Simulate API call
-    const timer = setTimeout(() => {
-      let filteredProducts = [...mockProducts];
-      
-      if (category) {
-        filteredProducts = filteredProducts.filter(
-          product => product.category === category
-        );
-      }
-      
-      if (search) {
-        const searchLower = search.toLowerCase();
-        filteredProducts = filteredProducts.filter(
-          product => 
-            product.name.toLowerCase().includes(searchLower) || 
-            product.description.toLowerCase().includes(searchLower)
-        );
-      }
-      
-      setProducts(filteredProducts);
-      setLoading(false);
-    }, 500);
+    // Get category from URL query params if exists
+    const params = new URLSearchParams(location.search);
+    const categoryParam = params.get('category');
+    if (categoryParam) {
+      setCategory(categoryParam);
+    }
     
-    return () => clearTimeout(timer);
-  }, [category, search]);
+    // Fetch categories
+    const fetchCategories = async () => {
+      try {
+        setCategoryLoading(true);
+        const response = await productService.getCategories();
+        setCategories(response.data.data);
+      } catch (error) {
+        console.error('Error fetching categories:', error);
+        message.error('Failed to load categories');
+      } finally {
+        setCategoryLoading(false);
+      }
+    };
+    
+    fetchCategories();
+  }, [location.search]);
+
+  useEffect(() => {
+    // Fetch products
+    const fetchProducts = async () => {
+      try {
+        setLoading(true);
+        
+        const params = {
+          page: pagination.page,
+          limit: pagination.limit
+        };
+        
+        if (category) {
+          params.category = category;
+        }
+        
+        if (search) {
+          params.search = search;
+        }
+        
+        const response = await productService.getProducts(params);
+        setProducts(response.data.data);
+        setPagination({
+          ...pagination,
+          total: response.data.total,
+          pages: response.data.pagination.pages
+        });
+      } catch (error) {
+        console.error('Error fetching products:', error);
+        message.error('Failed to load products');
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchProducts();
+  }, [category, search, pagination.page, pagination.limit]);
 
   const handleSearch = (value) => {
     setSearch(value);
-    setLoading(true);
+    setPagination({ ...pagination, page: 1 }); // Reset to first page on new search
   };
 
   const handleCategoryChange = (value) => {
     setCategory(value);
-    setLoading(true);
+    setPagination({ ...pagination, page: 1 }); // Reset to first page on category change
   };
 
   const handleAddToCart = async (product) => {
@@ -176,17 +156,12 @@ const ProductsPage = () => {
               size="large"
               allowClear
               onChange={handleCategoryChange}
+              value={category || undefined}
+              loading={categoryLoading}
             >
-              <Option value="Electronics">Electronics</Option>
-              <Option value="Clothing">Clothing</Option>
-              <Option value="Home & Kitchen">Home & Kitchen</Option>
-              <Option value="Books">Books</Option>
-              <Option value="Toys">Toys</Option>
-              <Option value="Sports">Sports</Option>
-              <Option value="Beauty">Beauty</Option>
-              <Option value="Health">Health</Option>
-              <Option value="Automotive">Automotive</Option>
-              <Option value="Other">Other</Option>
+              {categories.map(cat => (
+                <Option key={cat} value={cat}>{cat}</Option>
+              ))}
             </Select>
           </Col>
         </Row>
@@ -236,6 +211,7 @@ const ProductsPage = () => {
                       <Space direction="vertical">
                         <span>${product.price.toFixed(2)}</span>
                         <span>{product.category}</span>
+                        <span>{product.inStock ? 'In Stock' : 'Out of Stock'}</span>
                       </Space>
                     }
                   />

@@ -3,9 +3,9 @@ const { publishMessage, EVENT_TYPES, subscribeToMessages } = require('../../shar
 
 // Subscribe to order.created events to adjust inventory
 const setupSubscriptions = async () => {
-  await subscribeToMessages('order.created', async (message) => {
+  await subscribeToMessages(EVENT_TYPES.ORDER_CREATED, async (message) => {
     try {
-      console.log('Received order.created event', message);
+      console.log(`Received ${EVENT_TYPES.ORDER_CREATED} event`, message);
       
       // Extract order items
       const { items } = message;
@@ -35,11 +35,11 @@ const setupSubscriptions = async () => {
         }
       }
     } catch (error) {
-      console.error('Error processing order.created event:', error);
+      console.error(`Error processing ${EVENT_TYPES.ORDER_CREATED} event:`, error);
     }
   });
   
-  console.log('Subscribed to order.created events');
+  console.log(`Subscribed to ${EVENT_TYPES.ORDER_CREATED} events`);
 };
 
 // Call this function when the app starts
@@ -121,6 +121,24 @@ exports.getProducts = async (req, res, next) => {
   }
 };
 
+// @desc    Get product categories
+// @route   GET /api/products/categories
+// @access  Public
+exports.getCategories = async (req, res, next) => {
+  try {
+    // Get distinct categories from the database
+    const categories = await Product.distinct('category');
+    
+    res.status(200).json({
+      success: true,
+      count: categories.length,
+      data: categories
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
 // @desc    Get single product
 // @route   GET /api/products/:id
 // @access  Public
@@ -151,15 +169,14 @@ exports.createProduct = async (req, res, next) => {
   try {
     const product = await Product.create(req.body);
     
-    // Publish product.updated (created) event
-    await publishMessage(EVENT_TYPES.PRODUCT_UPDATED, {
+    // Publish product created event
+    await publishMessage(EVENT_TYPES.PRODUCT_CREATED, {
       productId: product._id,
       name: product.name,
       category: product.category,
       price: product.price,
       inStock: product.inStock,
-      quantity: product.quantity,
-      action: 'created'
+      quantity: product.quantity
     });
     
     res.status(201).json({
@@ -188,15 +205,14 @@ exports.updateProduct = async (req, res, next) => {
       });
     }
     
-    // Publish product.updated event
+    // Publish product updated event
     await publishMessage(EVENT_TYPES.PRODUCT_UPDATED, {
       productId: product._id,
       name: product.name,
       category: product.category,
       price: product.price,
       inStock: product.inStock,
-      quantity: product.quantity,
-      action: 'updated'
+      quantity: product.quantity
     });
     
     res.status(200).json({
@@ -224,7 +240,7 @@ exports.deleteProduct = async (req, res, next) => {
     
     await product.deleteOne();
     
-    // Publish product.updated (deleted) event
+    // Publish product deleted event with PRODUCT_UPDATED event type
     await publishMessage(EVENT_TYPES.PRODUCT_UPDATED, {
       productId: product._id,
       name: product.name,
